@@ -42,6 +42,7 @@ io.sockets.on('connection', function (socket) {
     {
         console.log('Player disconnected ! (' + socket.id + ')');
         delete allClients[socket.id];
+        io.sockets.emit('update_players', allClients); 
     });
 
     socket.on('reponse_question', function (reponseq) 
