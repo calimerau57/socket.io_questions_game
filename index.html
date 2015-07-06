@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF8" />
+		<title>Questions Time Game</title>
+		<style type="text/css">
+			@import url(http://fonts.googleapis.com/css?family=Montserrat:400,700);
+
+		.reponse {
+			width:200px;
+			height:92.5px;
+			background-color:orange;
+			float:left;
+			line-height:92.5px;
+			text-align: center;
+			-webkit-touch-callout: none;
+		    -webkit-user-select: none;
+		    -khtml-user-select: none;
+		    -moz-user-select: none;
+		    -ms-user-select: none;
+		    user-select: none;
+		}
+
+		.reponse:hover {
+			border:1px solid white;
+			width:198px;
+			height:90.5px;
+			line-height:90.5px;
+			cursor: pointer;
+		}
+		</style>
+		<script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+        <script src="https://cdn.socket.io/socket.io-1.3.5.js"></script>
+	</head>
+	<body style="overflow:hidden;">
+
+		<script type="text/javascript">
+		var socket = io.connect('http://78.235.125.194:70');
+
+		/*var socket = io.connect('http://192.168.1.27:8080', 
+		{
+		  	reconnect:false
+		});*/
+
+		socket.on('update_questions', function(data) 
+		{
+            $('#question').html(data['question']);
+            $('#rep_1').html(data['rep_1']);
+            $('#rep_2').html(data['rep_2']);
+            $('#rep_3').html(data['rep_3']);
+            $('#rep_4').html(data['rep_4']);
+            $('#rep_1').css({'background-color': 'orange'});
+            $('#rep_2').css({'background-color': 'orange'});
+            $('#rep_3').css({'background-color': 'orange'});
+            $('#rep_4').css({'background-color': 'orange'});
+        });
+
+        socket.on('update_players', function(data) 
+		{
+			$('#online_players').html('');
+			for(var x in data)
+			{
+			    var value = data[x];
+				$('#online_players').append(x.substr(0,8) + ': <strong>');
+			    for(var y in value)
+			    {
+			        if(y == 'score')
+			        {
+			        	$('#online_players').append(value[y] + '</strong>');
+			        }
+			    }
+			    $('#online_players').append('<br />');
+			}
+        });
+
+        socket.on('update_timer', function(data) 
+		{
+			$('#timer_').html(data);
+			playSoundTimer();
+        });
+
+        socket.on('result_reponse', function(data) 
+		{
+			$('#result_reponse').html(data);
+			setTimeout(function()
+			{
+				$('#result_reponse').html('');
+			},1500);
+        });
+
+        function validReponse(number)
+        {
+        	number = parseInt(number);
+        	if(number >= 1 && number <= 4)
+        	{
+        		socket.emit('reponse_question', number);
+        	}
+        }
+
+        function playSoundTimer()
+        {
+        	var audioElement = document.createElement('audio');
+        	audioElement.setAttribute('src', 'http://78.235.125.194:8080/timer.mp3');
+        	audioElement.setAttribute('autoplay', 'autoplay');
+        	$.get();
+        	audioElement.addEventListener("load", function() 
+        	{
+        		audioElement.play();
+        	}, true);
+        }
+
+        setInterval(function() 
+        {
+		  	var startTime = Date.now();
+		  	socket.emit('ping');
+		  	socket.on('pong', function() 
+		  	{
+		    	latency = Date.now()-startTime;
+		    	$('#ping').html('Ping: ' + latency + ' ms');
+		  	});
+		}, 1000);
+
+		</script>
+
+		<div style="width:630px;vertical-align: middle;margin: 0 auto;margin-top:150px;">
+
+			<div>
+				<div style="width:400px;height:252px;border:1px solid black;padding:5px;font-family: Montserrat,sans-serif;background-color:lightgray;float:left;">
+
+					<div style="height:65px;border:1px solid black;padding-left:5px;padding-right:5px;background-color:yellow;">
+						<strong>Question:</strong> 
+						<span id="question"></span>
+					</div>
+
+					<div>
+						
+						<div onclick="validReponse(1); $(this).css({'background-color': 'darkorange'});" id="rep_1" class="reponse"></div>
+						<div onclick="validReponse(2); $(this).css({'background-color': 'darkorange'});" id="rep_2" class="reponse"></div>
+						<div onclick="validReponse(3); $(this).css({'background-color': 'darkorange'});" id="rep_3" class="reponse"></div>
+						<div onclick="validReponse(4); $(this).css({'background-color': 'darkorange'});" id="rep_4" class="reponse"></div>
+
+					</div>
+
+					<!--Bienvenue <strong>calimerau57</strong> !<br />
+					En attente d'un joueur ...-->
+
+				</div>		
+
+				<div style="width:200px;height:252px;border:1px solid black;padding:5px;font-family: Montserrat,sans-serif;background-color:lightgray;float:left;margin-left:6px;">
+					<strong>Joueurs / Scores:</strong><br /><br />
+
+					<div id="online_players"></div>
+
+					<br /><strong>Temps restant:</strong><br /><br />
+
+					<center>
+						<span id="timer_">En attente de joueurs</span>
+					</center>
+
+				</div>
+			</div>
+
+			<div id="result_reponse" style="width:618px;height:20px;margin-top:6px;border:1px solid black;padding:5px;font-family: Montserrat,sans-serif;background-color:lightgray;float:left;">
+				
+			</div>
+
+		</div>
+
+		<div id="ping" style="right:0;bottom:0;height:18px;width:100px;border:1px solid lightgray;position:absolute;padding:5px;font-family: Montserrat,sans-serif;"></div>
+
+	</body>
+</html>
