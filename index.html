@@ -34,13 +34,11 @@
 	</head>
 	<body style="overflow:hidden;">
 
-		<script type="text/javascript">
-		var socket = io.connect('http://192.168.1.27:70');
-
-		/*var socket = io.connect('http://192.168.1.27:8080', 
+	<script type="text/javascript">
+		var socket = io.connect('http://192.168.1.27:70', 
 		{
-		  	reconnect:false
-		});*/
+		  	reconnection:false
+		});
 
 		socket.on('update_questions', function(data) 
 		{
