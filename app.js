@@ -1,118 +1,101 @@
-var app = require('express')(),
-    server = require('http').createServer(app),
-    io = require('socket.io').listen(server),
-    fs = require('fs');
+var express = require('express')();
+var server = require('http').createServer(express);
+var io = require('socket.io')(server);
+var fs = require('fs');
 
+express.get('/', function(req, res) {
+    res.sendFile(__dirname + '/index.html');
+});
 server.maxConnections = 2;
+server.listen(70);
 
-function question(question, goodrep, rep_1, rep_2, rep_3, rep_4)
-{
+var Question = function(question, answers) {
     this.question = question;
-    this.goodrep = goodrep;
-    this.rep_1 = rep_1;
-    this.rep_2 = rep_2;
-    this.rep_3 = rep_3;
-    this.rep_4 = rep_4;
+    this.answers = answers;
 }
 
-var allClients = {};
-
-var allQuestions =  
-[
-    new question('Quelle est la couleur du cheval blanc d\'Henri IV ?', 1, 'Blanc','Rouge','Bleu','Orange'),
-    new question('Comment s\'appel le président français actuel ?', 3, 'Barak Obama','Le père noël','François Hollande','Le marchant de sable')
+var onlinePlayers = {};
+var questions = [
+    new Question("Quelle est la couleur du cheval blanc d'Henry IV ?", {
+        'Blanc': true,
+        'Rouge': false,
+        'Bleu': false,
+        'Orange': false
+    }),
+    new Question("Comment s'appelle le président français actuel ?", {
+        'Barack Obama': false,
+        'Dominique': false,
+        'François Hollande': true,
+        'Marine': false
+    })
 ];
+var currentQuestionIndex = 0;
 
-var actual_question = 1;
+io.on('connection', function(socket) {
+    onlinePlayers[socket.id] = {
+        socketid: socket.id,
+        score: 0,
+        answer: ''
+    };
+    console.log('Un joueur a rejoint le jeu ! (' + socket.id + ')');
+    socket.emit('update_players', onlinePlayers);
+    socket.emit('update_timer', 'En attente de joueurs');
 
-app.get('/', function (req, res) {
-    res.sendfile(__dirname + '/index.html');
-});
-
-io.sockets.on('connection', function (socket) {
-
-    allClients[socket.id] = {score:0,rep:0};
-
-    console.log('New player connected ! (' + socket.id + ')');
-
-    /** Mettre à jour la liste des joueurs **/
-    io.sockets.emit('update_players', allClients); 
-    /** ================================== **/    
-
-    socket.on('disconnect', function() 
-    {
-        console.log('Player disconnected ! (' + socket.id + ')');
-        delete allClients[socket.id];
-        io.sockets.emit('update_players', allClients); 
+    socket.on('answer', function(answer) {
+        console.log(socket.id + ': ' + answer);
+        onlinePlayers[socket.id].answer = answer;
     });
 
-    socket.on('reponse_question', function (reponseq) 
-    {
-        console.log(socket.id + ': ' + reponseq);
-        allClients[socket.id]['rep'] = reponseq;
-    });
-
-    socket.on('ping', function() 
-    {
+    socket.on('ping', function() {
         socket.emit('pong');
     });
-
-    io.sockets.emit('update_timer', 'En attente de joueurs'); 
 });
 
-var whiled = 10;
-var first_loop = 0;
+io.on('disconnect', function(socket) {
+    console.log("Un joueur s'est déconnecté ! (" + socket.id + ')');
+    delete onlinePlayers[socket.id];
+    io.emit('update_players', onlinePlayers);
+});
 
-var timer_thread = setInterval(function ()
-{
-    if(Object.keys(allClients).length >= 2)
-    {
-        if(first_loop == 0)
-        {
-            io.sockets.emit('update_questions', {'question':allQuestions[actual_question-1].question,'rep_1':allQuestions[actual_question-1].rep_1,'rep_2':allQuestions[actual_question-1].rep_2,'rep_3':allQuestions[actual_question-1].rep_3,'rep_4':allQuestions[actual_question-1].rep_4}); 
-            first_loop = 1;
-        }
-
-        if(whiled == 0)
-        {   
-            for(var x in allClients)
-            {
-                var value = allClients[x];
-                for(var y in value)
-                {
-                    if(y == 'rep')
-                    {
-                        if(value[y] == allQuestions[actual_question-1].goodrep)
-                        {
-                            var score = allClients[x]['score'];
-                            allClients[x]['score'] = (score+1);
-                            io.sockets.connected[x].emit('result_reponse', '<font color="green">Bonne réponse !</font>'); 
-                        } else {
-                            io.sockets.connected[x].emit('result_reponse', '<font color="red">Mauvaise réponse !</font>'); 
-                        }
-                    }
-                }
-            }
-            io.sockets.emit('update_players', allClients); 
-            whiled = 11;
-            if(actual_question < allQuestions.length)
-            {
-                actual_question++;
-                io.sockets.emit('update_questions', {'question':allQuestions[actual_question-1].question,'rep_1':allQuestions[actual_question-1].rep_1,'rep_2':allQuestions[actual_question-1].rep_2,'rep_3':allQuestions[actual_question-1].rep_3,'rep_4':allQuestions[actual_question-1].rep_4}); 
-            } else {
-                console.log('Fin de la partie !');
-                clearInterval(timer_thread);
-                io.sockets.emit('update_timer', 'Fin de la partie !'); 
-            }
-            console.log('actual_question: ' + actual_question);
-        } else {
-            io.sockets.emit('update_timer', '<strong>' + (whiled) + '</strong> seconde(s)'); 
-        }
-        whiled--;
-    } else {
-        
+var checker = setInterval(function() {
+    if (Object.keys(onlinePlayers).length >= 2) {
+        emitQuestion();
+        clearInterval(checker);
     }
-    console.log(Object.keys(allClients).length);
 }, 1000);
 
-server.listen(70);
+var seconds = 10;
+
+var emitQuestion = function() {
+    if (currentQuestionIndex >= questions.length) {
+        console.log('Fin de la partie !');
+        io.emit('update_timer', 'Fin de la partie !');
+        return;
+    }
+    var first = true;
+    var interval = setInterval(function() {
+        if (first) {
+            first = false;
+            questionObj = questions[currentQuestionIndex++];
+            io.emit('update_questions', {'question': questionObj.question, 'answers': questionObj.answers});
+        }
+        io.emit('update_timer', '<strong>' + (seconds--) + '</strong> seconde(s)');
+        if (seconds == -1) {
+            seconds = 10;
+            clearInterval(interval);
+
+            for (var key in onlinePlayers) {
+                var player = onlinePlayers[key];
+                var socket = io.sockets.connected[player.socketid];
+                if (questionObj.answers[player.answer] == null || !questionObj.answers[player.answer]) {
+                    socket.emit('result', '<font color="red">Mauvaise réponse !</font>');
+                } else {
+                    onlinePlayers[key].score++;
+                    socket.emit('update_players', onlinePlayers);
+                    socket.emit('result', '<font color="green">Bonne réponse !</font>');
+                }
+            }
+            emitQuestion();
+        }
+    }, 1000);
+}
