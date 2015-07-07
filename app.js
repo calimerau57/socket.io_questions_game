@@ -17,10 +17,11 @@ function question(question, goodrep, rep_1, rep_2, rep_3, rep_4)
 
 var allClients = {};
 
-var allQuestions =  [
-                        new question('Quelle est la couleur du cheval blanc d\'Henri IV ?', 1, 'Blanc','Rouge','Bleu','Orange'),
-                        new question('Comment s\'appel le président français actuel ?', 3, 'Barak Obama','Dominique','François Hollande','Marine')
-                    ];
+var allQuestions =  
+[
+    new question('Quelle est la couleur du cheval blanc d\'Henri IV ?', 1, 'Blanc','Rouge','Bleu','Orange'),
+    new question('Comment s\'appel le président français actuel ?', 3, 'Barak Obama','Le père noël','François Hollande','Le marchant de sable')
+];
 
 var actual_question = 1;
 
