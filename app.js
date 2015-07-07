@@ -49,9 +49,7 @@ io.sockets.on('connection', function (socket) {
     {
         console.log(socket.id + ': ' + reponseq);
         allClients[socket.id]['rep'] = reponseq;
-        io.sockets.emit('update_players', allClients);
     });
-
 
     socket.on('ping', function() 
     {
@@ -59,9 +57,6 @@ io.sockets.on('connection', function (socket) {
     });
 
     io.sockets.emit('update_timer', 'En attente de joueurs'); 
-
-    //socket.emit('update_questions', {'question':allQuestions[actual_question-1].question,'rep_1':allQuestions[actual_question-1].rep_1,'rep_2':allQuestions[actual_question-1].rep_2,'rep_3':allQuestions[actual_question-1].rep_3,'rep_4':allQuestions[actual_question-1].rep_4}); 
-
 });
 
 var whiled = 10;
@@ -99,7 +94,6 @@ var timer_thread = setInterval(function ()
             }
             io.sockets.emit('update_players', allClients); 
             whiled = 11;
-
             if(actual_question < allQuestions.length)
             {
                 actual_question++;
@@ -118,7 +112,6 @@ var timer_thread = setInterval(function ()
         
     }
     console.log(Object.keys(allClients).length);
-    
 }, 1000);
 
 server.listen(70);
